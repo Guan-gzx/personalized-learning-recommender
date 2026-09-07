@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 运行时生成的数据（可由 scripts/init_db.py 重建）
+server/data/learning.db
+server/data/*.pt
+
+# 系统
+.DS_Store
+Thumbs.db
+*.log
