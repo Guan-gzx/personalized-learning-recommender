@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>知序 | 个性化学习推荐</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a href="{{ url_for('dashboard') }}" class="brand"><span class="brand-mark">知</span><span>知序</span></a>
+      <p class="side-label">学习空间</p>
+      <nav class="side-nav">
+        <a class="{{ 'active' if request.endpoint == 'dashboard' else '' }}" href="{{ url_for('dashboard') }}"><span>◈</span> 学习总览</a>
+        <a class="{{ 'active' if request.endpoint in ['practice', 'study', 'result'] else '' }}" href="{{ url_for('practice', student=student_id) }}"><span>✦</span> 开始练习</a>
+        <a class="{{ 'active' if request.endpoint == 'library' else '' }}" href="{{ url_for('library', student=student_id) }}"><span>▦</span> 题库中心</a>
+        <a class="{{ 'active' if request.endpoint == 'mistakes' else '' }}" href="{{ url_for('mistakes', student=student_id) }}"><span>⊗</span> 错题本</a>
+        <a class="{{ 'active' if request.endpoint == 'history' else '' }}" href="{{ url_for('history', student=student_id) }}"><span>◒</span> 学习记录</a>
+      </nav>
+      <div class="sidebar-bottom"><div class="mini-profile"><div class="avatar">学</div><div><strong>{{ student_id }}</strong><small>持续学习中</small></div></div><div class="system-note">遗忘曲线已开启<br><span>实时同步 · 安全存储</span></div></div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar"><div class="topbar-context"><span class="status-dot"></span>学习空间 <span class="slash">/</span> 今日计划</div><span class="spacer"></span><div class="top-actions"><button class="icon-btn" aria-label="通知">♧</button><span class="muted user-chip">{{ student_id }} <span class="avatar tiny">学</span></span></div></header>
+      <main>{% block content %}{% endblock %}</main>
+    </div>
+  </div>
+</body>
+</html>

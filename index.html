@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个性化学习推荐系统 · 知识图谱与遗忘曲线</title>
+<meta name="description" content="基于知识图谱与遗忘曲线的个性化练习推荐在线演示：100 道分层练习、智能推荐、知识星空图、错题本。纯前端运行，数据保存在浏览器本地。">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%233e86f7'/><text x='16' y='22' font-size='16' fill='white' text-anchor='middle'>星</text></svg>">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="brand" href="#/"><span class="brand-mark">星</span>知识星图</a>
+    <p class="side-label">学习中心</p>
+    <nav class="side-nav" id="side-nav">
+      <a href="#/" data-nav="dashboard"><span>◎</span>学习面板</a>
+      <a href="#/practice" data-nav="practice"><span>✦</span>智能练习</a>
+      <a href="#/library" data-nav="library"><span>▤</span>题库 · 100 题</a>
+      <a href="#/history" data-nav="history"><span>◷</span>学习记录</a>
+      <a href="#/mistakes" data-nav="mistakes"><span>↺</span>错题本</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="system-note">浏览器本地演示版<br><span>掌握度数据保存在 localStorage，重置后可重新体验冷启动</span></div>
+      <div class="mini-profile"><span class="avatar">学</span><div><strong>demo_student</strong><small>知识图谱 · 遗忘曲线推荐</small></div></div>
+      <button class="reset-btn" id="reset-btn" title="清空本地答题记录">重置学习数据</button>
+    </div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar">
+      <span class="topbar-context" id="crumb">学习面板</span>
+      <div class="topbar-actions">
+        <a class="tag" href="#/library">题库 100 题</a>
+        <a class="tag" href="https://github.com/" target="_blank" rel="noopener" id="repo-link" hidden>GitHub 源码</a>
+      </div>
+    </header>
+    <main class="content" id="view"></main>
+  </div>
+</div>
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
