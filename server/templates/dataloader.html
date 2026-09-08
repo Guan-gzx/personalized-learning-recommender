@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.dl-wrap{max-width:960px}
+.dl-card{background:var(--surface,#fff);border:1px solid #e4eaf3;border-radius:14px;padding:24px;margin-bottom:18px;box-shadow:0 16px 40px rgba(33,63,112,.07)}
+.dl-grid{display:grid;grid-template-columns:1fr 220px;gap:16px}
+.dl-drop{border:2px dashed #c9d8ef;border-radius:12px;padding:26px;text-align:center;background:#f8fbff}
+.dl-drop.has-file{border-color:var(--cyan,#3d82f6);background:#eaf2ff}
+.dl-drop strong{display:block;margin:8px 0 4px}
+.dl-drop small{color:#71809d}
+.dl-select{width:100%;padding:10px;border:1px solid #e4eaf3;border-radius:9px;font:14px inherit;margin-bottom:10px}
+.dl-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.dl-stat{border:1px solid #e4eaf3;border-radius:11px;padding:13px;text-align:center}
+.dl-stat b{display:block;font-size:22px}
+.dl-stat span{font-size:12px;color:#71809d}
+.dl-stat.ok b{color:var(--green,#30ad82)}
+.dl-stat.bad b{color:var(--red,#e86571)}
+.dl-errors{background:#fdf2f3;border:1px solid #f3c1c6;border-radius:11px;padding:14px 16px;color:#a0424c;font-size:13px;max-height:220px;overflow:auto}
+.dl-errors li{margin:4px 0}
+table.dl-preview{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+table.dl-preview th{background:#f7f9fd;padding:9px 11px;text-align:left;font-size:11px;color:#5b6b8a;border-bottom:1px solid #e4eaf3}
+table.dl-preview td{padding:9px 11px;border-bottom:1px solid #eef2f8;vertical-align:top;max-width:320px}
+.dl-radio{display:flex;gap:14px;margin:10px 0}
+.dl-radio label{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer}
+.dl-result{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.dl-result .big{font-size:26px;font-weight:800;color:var(--green,#30ad82)}
+.dl-steps{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.dl-step{display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #e4eaf3;border-radius:18px;padding:7px 14px;font-size:12px;color:#71809d}
+.dl-step.on{background:#eaf2ff;color:#3d82f6;border-color:#b8d2fb;font-weight:700}
+</style>
+<section class="page-title"><div><p class="eyebrow">DATA LOADER</p><h1>数据加载器</h1><p class="muted">上传 JSON / CSV 文件，校验后导入题目库或答题记录（先预览、确认后才入库）。</p></div></section>
+
+<div class="dl-steps">
+  <span class="dl-step {{ 'on' if not result and not token else '' }}"><b>①</b> 选择文件</span>
+  <span class="dl-step {{ 'on' if token else '' }}"><b>②</b> 解析校验 · 预览</span>
+  <span class="dl-step {{ 'on' if result else '' }}"><b>③</b> 确认导入</span>
+</div>
+
+{% if error %}
+<div class="dl-card"><div class="dl-errors" style="background:#fdf2f3">{{ error }}</div></div>
+{% endif %}
+
+{% if result %}
+<div class="dl-card">
+  <h3>导入完成</h3>
+  <div class="dl-result">
+    <span class="big">✓ {{ result.inserted }}</span><span>条新增</span>
+    {% if result.updated %}<span class="big" style="color:var(--cyan,#3d82f6)">{{ result.updated }}</span><span>条覆盖更新</span>{% endif %}
+    {% if result.skipped %}<span class="big" style="color:var(--amber,#f2a93b)">{{ result.skipped }}</span><span>条跳过（ID 重复）</span>{% endif %}
+    <span>共处理 {{ result.total }} 条</span>
+  </div>
+  <p class="muted" style="margin-top:12px">数据已写入 SQLite：可在 <a href="{{ url_for('library') }}">题库中心</a> 查看新题，或刷新 <a href="{{ url_for('dashboard') }}">学习总览</a> 看到新的推荐。</p>
+  <a class="button primary" href="{{ url_for('dataloader_page') }}">继续上传 <span>→</span></a>
+</div>
+{% endif %}
+
+{% if token %}
+<div class="dl-card">
+  <h3>② 校验通过，共 {{ staged_total }} 条待导入数据</h3>
+  <p class="muted">已暂存（未写入数据库）。下方预览前 {{ preview|length }} 条：</p>
+  <div style="overflow:auto">
+  <table class="dl-preview">
+    <thead><tr>{% if target == 'questions' %}<th>id</th><th>知识点</th><th>标题</th><th>题干</th><th>答案</th><th>难度</th>{% else %}<th>学生</th><th>题目</th><th>对错</th><th>用时(s)</th><th>时间</th>{% endif %}</tr></thead>
+    <tbody>
+    {% for row in preview %}
+      <tr>
+      {% if target == 'questions' %}
+        <td>{{ row.id }}</td><td>{{ row.knowledge_id }}</td><td>{{ row.title }}</td><td>{{ row.prompt }}</td><td>{{ row.answer }}</td><td>{{ '%.2f'|format(row.difficulty) }}</td>
+      {% else %}
+        <td>{{ row.student_id }}</td><td>{{ row.question_id }}</td><td>{{ '✓ 对' if row.correct else '✗ 错' }}</td><td>{{ row.duration_sec }}</td><td>{{ row.answered_at[:19] }}</td>
+      {% endif %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if staged_total > 20 %}<p class="muted">… 其余 {{ staged_total - 20 }} 条已通过校验</p>{% endif %}
+  {% if error_count %}
+  <div class="dl-errors" style="margin-top:14px"><strong>⚠ {{ error_count }} 条数据未通过校验（仅导入通过部分）：</strong>
+    <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+  <form method="post" action="{{ url_for('dataloader_commit') }}" style="margin-top:18px">
+    <input type="hidden" name="token" value="{{ token }}">
+    {% if target == 'questions' %}
+    <div class="dl-radio">
+      <label><input type="radio" name="duplicate_mode" value="skip" checked> 跳过已存在的 ID</label>
+      <label><input type="radio" name="duplicate_mode" value="overwrite"> 覆盖已存在的 ID</label>
+    </div>
+    {% endif %}
+    <button class="button primary" type="submit">确认导入 {{ staged_total }} 条 →</button>
+  </form>
+</div>
+{% elif not result %}
+<div class="dl-card">
+  <h3>① 上传数据文件</h3>
+  <div class="dl-grid">
+    <form method="post" action="{{ url_for('dataloader_preview') }}" enctype="multipart/form-data">
+      <div class="dl-drop" id="drop">
+        <input type="file" name="file" id="file-input" accept=".json,.csv,.txt" style="display:none">
+        <div style="font-size:34px">⇪</div>
+        <strong id="drop-title">点击选择 JSON / CSV 文件</strong>
+        <small id="drop-hint">题目：每行一条，choices 可为 JSON 数组或用「|」分隔</small>
+      </div>
+      <label class="muted" style="font-size:12px;display:block;margin-top:12px">导入目标</label>
+      <select class="dl-select" name="target">
+        <option value="questions">题目 questions</option>
+        <option value="interactions">答题记录 interactions</option>
+      </select>
+      <button class="button primary" type="submit" style="width:100%;margin-top:6px">解析并校验文件</button>
+    </form>
+    <div>
+      <p class="muted" style="font-size:12px;line-height:1.8">
+        <b>题目字段</b><br>
+        id*、knowledge_id*、title*、prompt*、choices*、answer*、explanation*、difficulty<br><br>
+        <b>记录字段</b><br>
+        student_id、question_id*、correct*（对/错）、duration_sec、answered_at<br><br>
+        * = 必填，id 留空自动生成
+      </p>
+      <a href="{{ url_for('dataloader_template', target='questions') }}" style="font-size:12px">下载题目模板 CSV</a><br>
+      <a href="{{ url_for('dataloader_template', target='interactions') }}" style="font-size:12px">下载记录模板 CSV</a>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if error and not token and not result %}
+<div class="dl-card" style="border-color:#f3c1c6">
+  <h3 style="color:#a0424c">上传失败</h3>
+  <p style="color:#a0424c">{{ error }}</p>
+  {% if errors %}<div class="dl-errors"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+</div>
+{% endif %}
+
+{% if not token and not result and not error %}
+<div class="dl-card">
+  <h3>可用知识点</h3>
+  <p class="muted">
+    {% for point in points %}<span class="tag" style="margin-right:8px">{{ point.id }} · {{ point.name }}</span>{% endfor %}
+  </p>
+</div>
+{% endif %}
+
+<script>
+(function(){
+  var drop = document.getElementById('drop');
+  var input = document.getElementById('file-input');
+  if (!drop) return;
+  drop.addEventListener('click', function(){ input.click(); });
+  input.addEventListener('change', function(){
+    if (input.files.length){
+      drop.classList.add('has-file');
+      document.getElementById('drop-title').textContent = '已选择：' + input.files[0].name;
+      document.getElementById('drop-hint').textContent = (input.files[0].size/1024).toFixed(1) + ' KB，点击下方按钮解析';
+    }
+  });
+})();
+</script>
+{% endblock %}

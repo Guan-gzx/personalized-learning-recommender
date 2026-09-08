@@ -17,6 +17,7 @@
         <a class="{{ 'active' if request.endpoint == 'library' else '' }}" href="{{ url_for('library', student=student_id) }}"><span>▦</span> 题库中心</a>
         <a class="{{ 'active' if request.endpoint == 'mistakes' else '' }}" href="{{ url_for('mistakes', student=student_id) }}"><span>⊗</span> 错题本</a>
         <a class="{{ 'active' if request.endpoint == 'history' else '' }}" href="{{ url_for('history', student=student_id) }}"><span>◒</span> 学习记录</a>
+        <a class="{{ 'active' if request.endpoint in ['dataloader_page', 'dataloader_preview', 'dataloader_commit'] else '' }}" href="{{ url_for('dataloader_page') }}"><span>⇪</span> 数据加载器</a>
       </nav>
       <div class="sidebar-bottom"><div class="mini-profile"><div class="avatar">学</div><div><strong>{{ student_id }}</strong><small>持续学习中</small></div></div><div class="system-note">遗忘曲线已开启<br><span>实时同步 · 安全存储</span></div></div>
     </aside>

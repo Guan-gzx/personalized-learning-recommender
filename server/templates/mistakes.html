@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-title"><div><p class="eyebrow">MISTAKE BOOK</p><h1>错题本</h1><p class="muted">共 {{ events|length }} 道待巩固 · 答错后掌握度自动下调，推荐引擎会优先安排复练。</p></div><a class="button" href="{{ url_for('history', student=student_id) }}">查看学习记录 →</a></section>
+<section class="mistake-grid">
+  {% for event in events %}
+  <article class="mistake-card">
+    <div class="card-top"><span class="tag">{{ event.knowledge_name }}</span><span class="difficulty-dot {{ 'hard' if event.question.difficulty >= 0.52 else 'easy' }}">{{ '进阶' if event.question.difficulty >= 0.52 else '基础' }}</span></div>
+    <h3>{{ event.question.title }}</h3>
+    <p>{{ event.question.prompt }}</p>
+    <div class="mistake-explanation"><strong>正确答案：{{ event.question.answer }}</strong>{{ event.question.explanation }}</div>
+    <footer><small>{{ event.answered_at[:16].replace('T',' ') }} 答错</small><a class="button" href="{{ url_for('study', question_id=event.question.id, student=student_id) }}">再练一次 →</a></footer>
+  </article>
+  {% else %}
+  <div class="empty-state"><strong>太棒了，暂无错题！</strong><p>继续保持，或去题库挑战进阶难度。</p><a class="button" href="{{ url_for('library', student=student_id) }}">浏览题库 →</a></div>
+  {% endfor %}
+</section>
+{% endblock %}

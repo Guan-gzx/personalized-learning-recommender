@@ -3,12 +3,14 @@ from pathlib import Path
 from flask import Flask, abort, jsonify, redirect, render_template, request, url_for
 
 from recommender.db import Repository
+from recommender.dataloader import DataLoader
 from recommender.service import LearningService
 
 ROOT = Path(__file__).resolve().parent
 app = Flask(__name__)
 repo = Repository(ROOT / "data" / "learning.db")
 service = LearningService(repo)
+loader = DataLoader(repo, ROOT / "data" / "uploads")
 
 
 @app.before_request
@@ -71,8 +73,12 @@ def history():
 
 @app.get("/mistakes")
 def mistakes():
-    student_id = request.args.get("student", "demo_student")
-    return render_template("mistakes.html", student_id=student_id, events=service.learning_history(student_id, only_wrong=True))
+    student_id = request.args.get("student", "demo_student") or "demo_student"
+    # 同一题只保留最近一次答错记录（按时间序遍历，后者覆盖前者）
+    latest_wrong = {}
+    for event in service.learning_history(student_id, only_wrong=True):
+        latest_wrong[event["question"]["id"]] = event
+    return render_template("mistakes.html", student_id=student_id, events=list(latest_wrong.values()))
 
 
 @app.get("/knowledge/<knowledge_id>")
@@ -148,6 +154,68 @@ def result(question_id):
 @app.get("/api/dashboard/<student_id>")
 def api_dashboard(student_id):
     return jsonify(service.dashboard(student_id))
+
+
+# ---------- DataLoader：Web 界面数据加载器 ----------
+
+@app.get("/dataloader")
+def dataloader_page():
+    return render_template("dataloader.html", points=repo.knowledge_points())
+
+
+@app.post("/dataloader/preview")
+def dataloader_preview():
+    upload = request.files.get("file")
+    target = request.form.get("target", "questions")
+    if target not in ("questions", "interactions"):
+        abort(400)
+    if upload is None or not upload.filename:
+        return render_template("dataloader.html", points=repo.knowledge_points(),
+                               error="请先选择要上传的文件")
+    raw = upload.read()
+    if not raw:
+        return render_template("dataloader.html", points=repo.knowledge_points(),
+                               error="上传的文件为空")
+    rows, parse_errors = loader.parse(raw, upload.filename, target)
+    if not rows:
+        return render_template("dataloader.html", points=repo.knowledge_points(),
+                               error="未能从文件中解析出任何数据行", errors=parse_errors)
+    valid, row_errors = loader.validate(rows, target)
+    parse_errors = [f"第 {e['row']} 行（{e['title']}）：{'；'.join(e['problems'])}" for e in row_errors] + parse_errors
+    token = loader.stage(valid, target) if valid else ""
+    preview = valid[:20]
+    return render_template(
+        "dataloader.html", points=repo.knowledge_points(), target=target,
+        filename=upload.filename, total=len(rows), valid_count=len(valid),
+        error_count=len(parse_errors), errors=parse_errors[:30],
+        preview=preview, token=token, staged_total=len(valid),
+    )
+
+
+@app.post("/dataloader/commit")
+def dataloader_commit():
+    token = request.form.get("token", "")
+    duplicate_mode = request.form.get("duplicate_mode", "skip")
+    result = loader.commit(token, duplicate_mode)
+    if result is None:
+        return render_template("dataloader.html", points=repo.knowledge_points(),
+                               error="加载会话已过期，请重新上传文件")
+    return render_template("dataloader.html", points=repo.knowledge_points(), result=result)
+
+
+@app.get("/dataloader/template/<target>")
+def dataloader_template(target):
+    if target == "questions":
+        csv_text = "id,knowledge_id,title,prompt,choices,answer,explanation,difficulty\n" \
+            ",integer,示例题,2 + 3 = ?,5|6|1|0,5,先算加法。,0.30\n"
+    elif target == "interactions":
+        csv_text = "student_id,question_id,correct,duration_sec,answered_at\n" \
+            "demo_student,q01,1,30,\n"
+    else:
+        abort(404)
+    from flask import Response
+    return Response("\ufeff" + csv_text, mimetype="text/csv",
+                    headers={"Content-Disposition": f"attachment; filename={target}_template.csv"})
 
 
 if __name__ == "__main__":
