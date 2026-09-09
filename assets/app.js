@@ -68,6 +68,8 @@
     const recent = [...state.answers].sort((a, b) => b.at - a.at).slice(0, 8).map(a => a.qid);
     const seen = new Set(recent);
     const answered = new Set(state.answers.map(a => a.qid));
+    const attemptCounts = {};
+    for (const a of state.answers) attemptCounts[a.qid] = (attemptCounts[a.qid] || 0) + 1;
     const scored = [];
     for (const q of QUESTIONS) {
       if (seen.has(q.id)) continue;
@@ -76,9 +78,11 @@
       const weak = 1 - m.value;
       const prereqGap = Math.max(0, ...prerequisitesOf(q.knowledge_id).map(p => 1 - mastery[p].value), 0);
       const affinity = Math.max(0, ...neighborsOf(q.knowledge_id).map(p => 1 - mastery[p].value), 0);
-      const score = 0.56 * weak + 0.20 * prereqGap + 0.12 * q.difficulty + 0.12 * affinity;
+      const novelty = 1 / (1 + (attemptCounts[q.id] || 0));
+      const score = 0.46 * weak + 0.16 * prereqGap + 0.10 * q.difficulty + 0.10 * affinity + 0.18 * novelty;
       let reason = "掌握度偏低，需要巩固";
-      if (prereqGap > 0.45) reason = "前置知识存在缺口，建议先复习基础";
+      if (!attemptCounts[q.id]) reason = "新题拓展：尚未练习过，优先尝鲜";
+      else if (prereqGap > 0.45) reason = "前置知识存在缺口，建议先复习基础";
       else if (m.daysSince != null && m.daysSince > 5) reason = "距上次练习较久，进入遗忘复习窗口";
       scored.push({ q, score, reason, mastery: m.value, isReview: answered.has(q.id) });
     }
