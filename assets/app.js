@@ -7,15 +7,15 @@
 
   const POINTS = COURSE_DATA.knowledge_points;
   const EDGES = COURSE_DATA.edges;
-  const QUESTIONS = COURSE_DATA.questions;
   const POINT_BY_ID = Object.fromEntries(POINTS.map(p => [p.id, p]));
-  const Q_BY_ID = Object.fromEntries(QUESTIONS.map(q => [q.id, q]));
+  let QUESTIONS = [];
+  let Q_BY_ID = {};
   const POSITIONS = { integer: [18, 52], fractions: [39, 25], equations: [61, 52], functions: [82, 25], geometry: [39, 78] };
   const STORE_KEY = "plr_demo_state_v1";
   const DAY = 86400000;
 
   /* ---------------- 本地状态 ---------------- */
-  const defaultState = () => ({ answers: [], favorites: [], dailyGoal: 5 });
+  const defaultState = () => ({ answers: [], favorites: [], dailyGoal: 5, customQuestions: [] });
   let state = loadState();
   function loadState() {
     try {
@@ -25,6 +25,15 @@
     return defaultState();
   }
   function saveState() { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+
+  /* 题库 = 内置 100 题 + 数据加载器导入的自定义题目（存 localStorage） */
+  function rebuildQuestions() {
+    QUESTIONS = [...COURSE_DATA.questions, ...state.customQuestions];
+    Q_BY_ID = Object.fromEntries(QUESTIONS.map(q => [q.id, q]));
+    const libNav = document.querySelector('[data-nav="library"]');
+    if (libNav) libNav.innerHTML = `<span>▤</span>题库 · ${QUESTIONS.length} 题`;
+  }
+  rebuildQuestions();
 
   /* ---------------- 掌握度模型（遗忘曲线） ----------------
    * 每个知识点从 0.5 出发；答对按难度加权提升、答错衰减，
@@ -450,6 +459,159 @@
       <div class="detail-grid">${miniCards}</div>`;
   }
 
+  /* ---------------- 数据加载器（纯前端，导入到 localStorage） ---------------- */
+  function parseLoaderText(text) {
+    text = text.replace(/^﻿/, "").trim();
+    if (!text) return { rows: [], errors: ["内容为空"] };
+    if (text.startsWith("[") || text.startsWith("{")) {
+      try {
+        const data = JSON.parse(text);
+        const rows = Array.isArray(data) ? data : (data.questions || []);
+        if (!rows.length) return { rows: [], errors: ["JSON 中未找到题目数组"] };
+        return { rows, errors: [] };
+      } catch (e) { return { rows: [], errors: ["JSON 解析失败：" + e.message] }; }
+    }
+    // CSV：首行表头
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) return { rows: [], errors: ["CSV 至少需要表头 + 1 行数据"] };
+    const splitCsv = line => {
+      const out = []; let cur = "", inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (inQ) { if (c === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else inQ = false; } else cur += c; }
+        else if (c === '"') inQ = true; else if (c === ",") { out.push(cur); cur = ""; } else cur += c;
+      }
+      out.push(cur); return out.map(s => s.trim());
+    };
+    const headers = splitCsv(lines[0]);
+    const rows = [], errors = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cells = splitCsv(lines[i]);
+      const row = {};
+      headers.forEach((h, idx) => { row[h] = cells[idx] ?? ""; });
+      rows.push(row);
+    }
+    return { rows, errors };
+  }
+
+  function validateLoaderRows(rows) {
+    const valid = [], errors = [];
+    let maxNum = Math.max(0, ...QUESTIONS.map(q => { const m = /^q(\d+)$/.exec(q.id); return m ? +m[1] : 0; }));
+    rows.forEach((raw, i) => {
+      const problems = [];
+      let choices = raw.choices;
+      if (typeof choices === "string") {
+        const t = choices.trim();
+        if (t.startsWith("[")) { try { choices = JSON.parse(t); } catch (e) { choices = t.split("|"); } }
+        else choices = t.split("|");
+      }
+      choices = (choices || []).map(c => String(c).trim()).filter(Boolean);
+      const q = {
+        id: String(raw.id || "").trim(),
+        knowledge_id: String(raw.knowledge_id || "").trim(),
+        title: String(raw.title || "").trim(),
+        prompt: String(raw.prompt || "").trim(),
+        choices,
+        answer: String(raw.answer || "").trim(),
+        explanation: String(raw.explanation || "").trim(),
+        difficulty: parseFloat(raw.difficulty),
+      };
+      if (!q.id) q.id = "q" + (++maxNum);
+      else { const m = /^q(\d+)$/.exec(q.id); if (m) maxNum = Math.max(maxNum, +m[1]); }
+      if (!POINT_BY_ID[q.knowledge_id]) problems.push("知识点不存在（可用：" + POINTS.map(p => p.id).join("/") + "）");
+      if (!q.title) problems.push("缺少 title");
+      if (!q.prompt) problems.push("缺少题干 prompt");
+      if (choices.length < 2) problems.push("选项至少 2 个（用 | 分隔或 JSON 数组）");
+      else if (!choices.includes(q.answer)) problems.push("答案不在选项中");
+      if (!q.explanation) problems.push("缺少解析 explanation");
+      if (isNaN(q.difficulty)) q.difficulty = 0.5;
+      if (q.difficulty < 0 || q.difficulty > 1) problems.push("难度需在 0~1 之间");
+      if (Q_BY_ID[q.id] || valid.some(v => v.id === q.id)) problems.push(`ID ${q.id} 已存在`);
+      if (problems.length) errors.push({ row: i + 1, title: q.title || q.id, problems });
+      else valid.push(q);
+    });
+    return { valid, errors };
+  }
+
+  function renderLoader(importedCount = 0) {
+    setNav("loader"); crumb.textContent = "数据加载器";
+    const customs = state.customQuestions;
+    view.innerHTML = `
+      <section class="page-title"><div><p class="eyebrow">DATA LOADER</p><h1>数据加载器</h1>
+        <p class="muted">上传 JSON / CSV 题目文件，校验预览后导入本地题库（存浏览器 localStorage），立即可练习。数据库全表查询请见<a href="database.html">数据库浏览器</a>。</p></div></section>
+      ${importedCount ? `<div class="panel" style="margin-bottom:16px"><h3>✓ 导入完成，共 ${importedCount} 道题</h3><p class="muted">已并入本地题库（现共 ${QUESTIONS.length} 题），新颖度加权会让它们优先出现在练习中。</p><a class="button primary" href="#/practice">立即开始练习</a> <a class="button ghost" href="#/library">查看题库</a></div>` : ""}
+      <div class="panel" style="margin-bottom:16px">
+        <h3>① 选择文件或粘贴内容</h3>
+        <input type="file" id="ld-file" accept=".json,.csv,.txt" style="margin:10px 0">
+        <textarea id="ld-paste" rows="5" style="width:100%;box-sizing:border-box" placeholder='也可直接粘贴 JSON 数组或 CSV 文本…'></textarea>
+        <p class="muted" style="font-size:12px;line-height:1.8">字段：id（留空自动生成）、knowledge_id*（${POINTS.map(p => p.id).join(" / ")}）、title*、prompt*、choices*（JSON 数组或用 | 分隔）、answer*、explanation*、difficulty（0~1，默认 0.5）</p>
+        <button class="button primary" id="ld-parse">解析并校验</button>
+        <button class="button ghost" id="ld-tpl">下载 CSV 模板</button>
+      </div>
+      <div id="ld-result"></div>
+      <div class="panel" style="margin-top:16px">
+        <h3>已导入的自定义题目（${customs.length} 道）</h3>
+        ${customs.length ? `
+          <table class="db"><thead><tr><th>ID</th><th>标题</th><th>知识点</th><th>难度</th></tr></thead>
+          <tbody>${customs.map(q => `<tr><td>${esc(q.id)}</td><td>${esc(q.title)}</td><td>${esc(POINT_BY_ID[q.knowledge_id].name)}</td><td>${q.difficulty}</td></tr>`).join("")}</tbody></table>
+          <button class="button ghost" style="color:#cf222e;border-color:#f3c1c5" id="ld-clear" style="margin-top:10px">清空自定义题目</button>`
+        : `<p class="muted">暂无自定义题目。</p>`}
+      </div>`;
+
+    let staged = null;
+    const result = document.getElementById("ld-result");
+    const showParsed = (rows, parseErrors) => {
+      const { valid, errors } = validateLoaderRows(rows);
+      const allErrors = [...parseErrors.map(e => ({ row: "-", title: "", problems: [e] })), ...errors];
+      if (!rows.length) { result.innerHTML = `<div class="panel"><p class="muted">⚠ ${esc(allErrors.map(e => e.problems.join("；")).join("；") || "未解析到数据")}</p></div>`; staged = null; return; }
+      staged = valid;
+      result.innerHTML = `
+        <div class="panel">
+          <h3>② 校验预览：共 ${rows.length} 行，<b style="color:var(--green,#1a7f37)">${valid.length} 通过</b>${allErrors.length ? `，<b style="color:#cf222e">${allErrors.length} 未通过</b>` : ""}</h3>
+          ${allErrors.length ? `<ul style="color:#cf222e;font-size:13px;line-height:1.8">${allErrors.slice(0, 30).map(e => `<li>第 ${e.row} 行${e.title ? "（" + esc(e.title) + "）" : ""}：${esc(e.problems.join("；"))}</li>`).join("")}</ul>` : ""}
+          ${valid.length ? `
+            <table class="db"><thead><tr><th>ID</th><th>标题</th><th>知识点</th><th>选项数</th><th>答案</th><th>难度</th></tr></thead>
+            <tbody>${valid.slice(0, 20).map(q => `<tr><td>${esc(q.id)}</td><td>${esc(q.title)}</td><td>${esc(POINT_BY_ID[q.knowledge_id].name)}</td><td>${q.choices.length}</td><td>${esc(q.answer)}</td><td>${q.difficulty}</td></tr>`).join("")}</tbody></table>
+            ${valid.length > 20 ? `<p class="muted">仅预览前 20 条</p>` : ""}
+            <button class="button primary" id="ld-commit" style="margin-top:10px">③ 确认导入 ${valid.length} 道题</button>` : `<p class="muted">没有可导入的数据。</p>`}
+        </div>`;
+      const commitBtn = document.getElementById("ld-commit");
+      if (commitBtn) commitBtn.addEventListener("click", () => {
+        const count = staged.length;
+        state.customQuestions.push(...staged);
+        saveState(); rebuildQuestions();
+        renderLoader(count);
+      });
+    };
+    const clearBtn = document.getElementById("ld-clear");
+    if (clearBtn) clearBtn.addEventListener("click", () => {
+      if (!confirm(`确定删除全部 ${state.customQuestions.length} 道自定义题目？`)) return;
+      state.customQuestions = [];
+      saveState(); rebuildQuestions(); router();
+    });
+
+    document.getElementById("ld-parse").addEventListener("click", () => {
+      const file = document.getElementById("ld-file").files[0];
+      const pasted = document.getElementById("ld-paste").value.trim();
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = () => { const { rows, errors } = parseLoaderText(String(reader.result)); showParsed(rows, errors); };
+        reader.onerror = () => { result.innerHTML = `<div class="panel"><p class="muted">⚠ 文件读取失败</p></div>`; };
+        reader.readAsText(file, "UTF-8");
+      } else if (pasted) {
+        const { rows, errors } = parseLoaderText(pasted); showParsed(rows, errors);
+      } else {
+        result.innerHTML = `<div class="panel"><p class="muted">⚠ 请先选择文件或粘贴内容</p></div>`;
+      }
+    });
+    document.getElementById("ld-tpl").addEventListener("click", () => {
+      const csv = "id,knowledge_id,title,prompt,choices,answer,explanation,difficulty\n,integer,示例题标题,题干内容,选项A|选项B|选项C|选项D,选项A,解析文字,0.45\n";
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+      a.download = "questions_template.csv"; a.click(); URL.revokeObjectURL(a.href);
+    });
+  }
+
   function render404() {
     view.innerHTML = emptyBox("页面不存在", "链接可能已过期，回面板重新出发。", "#/");
   }
@@ -474,12 +636,13 @@
     if (root === "study" && arg) return renderStudy(arg, query);
     if (root === "result" && arg) return renderResult(arg, query);
     if (root === "knowledge" && arg) return renderKnowledge(arg);
+    if (root === "loader") return renderLoader();
     render404();
   }
   window.addEventListener("hashchange", router);
 
   document.getElementById("reset-btn").addEventListener("click", () => {
-    if (confirm("确定清空本地学习记录？掌握度、收藏和练习历史将全部重置。")) {
+    if (confirm("确定清空本地学习数据？掌握度、收藏、练习历史和已导入的自定义题目将全部重置。")) {
       state = defaultState(); saveState(); location.hash = "#/"; router();
     }
   });

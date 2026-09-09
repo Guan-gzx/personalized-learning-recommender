@@ -190,3 +190,8 @@ body{margin:0;color:var(--ink);background:var(--paper);font:15px/1.5 "Microsoft 
 
 @media(max-width:960px){.library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dash-grid{grid-template-columns:1fr}.summary-strip{grid-template-columns:repeat(2,1fr)}.detail-grid{grid-template-columns:1fr}.mistake-grid{grid-template-columns:1fr}}
 @media(max-width:680px){.sidebar{display:none}.page-title{align-items:flex-start;flex-direction:column}.page-title h1{font-size:26px}.filterbar{align-items:stretch}.filterbar select,.search-input{width:100%}.library-grid{grid-template-columns:1fr}.daily-plan{grid-template-columns:1fr;gap:16px}.summary-strip{grid-template-columns:repeat(2,1fr)}.model-explainer{grid-template-columns:1fr}.content{padding:20px 4% 50px}}
+
+/* 数据加载器 / 数据表格 */
+table.db{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+table.db th{background:#f7f9fd;color:#5b6b8a;text-align:left;font-size:11px;letter-spacing:.5px;padding:10px 13px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.db td{padding:9px 13px;border-bottom:1px solid #eef2f8;vertical-align:top}
