@@ -164,6 +164,24 @@ def data_page():
     return render_template("data.html", points=repo.knowledge_points(), tab=request.args.get("tab", "loader"))
 
 
+# 常见手动输入别名：自动跳转到正确页面，避免 404
+_ALIAS = {
+    "data.html": "data_page", "dataloader.html": "data_page", "database": "data_page",
+    "database.html": "data_page", "db": "data_page",
+    "index": "dashboard", "index.html": "dashboard", "home": "dashboard",
+    "lib": "library", "questions": "library",
+    "wrong": "mistakes", "wrongbook": "mistakes",
+}
+
+
+@app.get("/<alias>")
+def alias_redirect(alias):
+    target = _ALIAS.get(alias.lower().strip("/"))
+    if target:
+        return redirect(url_for(target, **request.args))
+    abort(404)
+
+
 @app.get("/api/db")
 def api_db():
     """数据库浏览器数据源：全部业务表实时快照。"""
