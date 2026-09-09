@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 
 import numpy as np
@@ -144,6 +144,9 @@ class LearningService:
         # even if older seeded logs carry later timestamps.
         recent = sorted(self.repo.interactions(student_id), key=lambda item: item["id"])[-8:]
         seen = {event["question_id"] for event in recent}
+        # Novelty: questions never attempted get a strong exploration bonus, so
+        # newly added exercises surface in practice instead of looping old ones.
+        attempt_counts = Counter(event["question_id"] for event in self.repo.interactions(student_id))
         for question in self.repo.questions():
             if question["id"] in seen:
                 continue
@@ -152,10 +155,14 @@ class LearningService:
             prerequisite_gap = max((1 - mastery[item] for item in prerequisites[knowledge_id]), default=0)
             # Graph affinity rewards exercises connected to the student's weak neighborhood.
             graph_affinity = affinity[knowledge_id]
-            score = 0.56 * weak + 0.20 * prerequisite_gap + 0.12 * question["difficulty"] + 0.12 * graph_affinity
+            novelty = 1 / (1 + attempt_counts.get(question["id"], 0))
+            score = (0.46 * weak + 0.16 * prerequisite_gap + 0.10 * question["difficulty"]
+                     + 0.10 * graph_affinity + 0.18 * novelty)
             reason = "掌握度偏低，需要巩固"
             prerequisite_names = [points[item]["name"] for item in prerequisites[knowledge_id]]
             path = " → ".join(prerequisite_names + [points[knowledge_id]["name"]]) if prerequisite_names else points[knowledge_id]["name"]
+            if attempt_counts.get(question["id"], 0) == 0:
+                reason = "新题拓展：尚未练习过，优先尝鲜"
             if prerequisite_gap > 0.45:
                 reason = "前置知识存在缺口，建议先复习基础"
             if diagnostics[knowledge_id]["interval_days"] > 5:
