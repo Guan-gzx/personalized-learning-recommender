@@ -156,11 +156,24 @@ def api_dashboard(student_id):
     return jsonify(service.dashboard(student_id))
 
 
-# ---------- DataLoader：Web 界面数据加载器 ----------
+# ---------- 数据中心：DataLoader + 数据库浏览器（合并页） ----------
 
+@app.get("/data")
 @app.get("/dataloader")
-def dataloader_page():
-    return render_template("dataloader.html", points=repo.knowledge_points())
+def data_page():
+    return render_template("data.html", points=repo.knowledge_points(), tab=request.args.get("tab", "loader"))
+
+
+@app.get("/api/db")
+def api_db():
+    """数据库浏览器数据源：全部业务表实时快照。"""
+    tables = {}
+    with repo.connect() as conn:
+        for name in ("questions", "interactions", "knowledge_points", "edges", "favorites", "learner_settings"):
+            cols = [row[1] for row in conn.execute(f"PRAGMA table_info({name})")]
+            rows = [dict(row) for row in conn.execute(f"SELECT * FROM {name}")]
+            tables[name] = {"columns": cols, "rows": rows}
+    return jsonify({"tables": tables})
 
 
 @app.post("/dataloader/preview")
@@ -170,22 +183,22 @@ def dataloader_preview():
     if target not in ("questions", "interactions"):
         abort(400)
     if upload is None or not upload.filename:
-        return render_template("dataloader.html", points=repo.knowledge_points(),
+        return render_template("data.html", points=repo.knowledge_points(), tab="loader",
                                error="请先选择要上传的文件")
     raw = upload.read()
     if not raw:
-        return render_template("dataloader.html", points=repo.knowledge_points(),
+        return render_template("data.html", points=repo.knowledge_points(), tab="loader",
                                error="上传的文件为空")
     rows, parse_errors = loader.parse(raw, upload.filename, target)
     if not rows:
-        return render_template("dataloader.html", points=repo.knowledge_points(),
+        return render_template("data.html", points=repo.knowledge_points(), tab="loader",
                                error="未能从文件中解析出任何数据行", errors=parse_errors)
     valid, row_errors = loader.validate(rows, target)
     parse_errors = [f"第 {e['row']} 行（{e['title']}）：{'；'.join(e['problems'])}" for e in row_errors] + parse_errors
     token = loader.stage(valid, target) if valid else ""
     preview = valid[:20]
     return render_template(
-        "dataloader.html", points=repo.knowledge_points(), target=target,
+        "data.html", points=repo.knowledge_points(), tab="loader", target=target,
         filename=upload.filename, total=len(rows), valid_count=len(valid),
         error_count=len(parse_errors), errors=parse_errors[:30],
         preview=preview, token=token, staged_total=len(valid),
@@ -198,9 +211,9 @@ def dataloader_commit():
     duplicate_mode = request.form.get("duplicate_mode", "skip")
     result = loader.commit(token, duplicate_mode)
     if result is None:
-        return render_template("dataloader.html", points=repo.knowledge_points(),
+        return render_template("data.html", points=repo.knowledge_points(), tab="loader",
                                error="加载会话已过期，请重新上传文件")
-    return render_template("dataloader.html", points=repo.knowledge_points(), result=result)
+    return render_template("data.html", points=repo.knowledge_points(), tab="loader", result=result)
 
 
 @app.get("/dataloader/template/<target>")

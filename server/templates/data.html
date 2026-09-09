@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.dc-tabs{display:flex;gap:8px;margin-bottom:18px}
+.dc-tab{display:flex;align-items:center;gap:7px;border:1px solid #e4eaf3;background:#fff;border-radius:18px;padding:9px 18px;font:600 13px inherit;color:#71809d;cursor:pointer}
+.dc-tab.on{background:#eaf2ff;color:#3d82f6;border-color:#b8d2fb}
+.dl-card{background:#fff;border:1px solid #e4eaf3;border-radius:14px;padding:24px;margin-bottom:18px;box-shadow:0 16px 40px rgba(33,63,112,.07)}
+.dl-grid{display:grid;grid-template-columns:1fr 220px;gap:16px}
+.dl-drop{border:2px dashed #c9d8ef;border-radius:12px;padding:26px;text-align:center;background:#f8fbff;cursor:pointer}
+.dl-drop.has-file{border-color:#3d82f6;background:#eaf2ff}
+.dl-drop strong{display:block;margin:8px 0 4px}
+.dl-drop small{color:#71809d}
+.dl-select{width:100%;padding:10px;border:1px solid #e4eaf3;border-radius:9px;font:14px inherit;margin-bottom:10px}
+.dl-errors{background:#fdf2f3;border:1px solid #f3c1c6;border-radius:11px;padding:14px 16px;color:#a0424c;font-size:13px;max-height:220px;overflow:auto}
+.dl-errors li{margin:4px 0}
+table.dl-preview{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+table.dl-preview th{background:#f7f9fd;padding:9px 11px;text-align:left;font-size:11px;color:#5b6b8a;border-bottom:1px solid #e4eaf3}
+table.dl-preview td{padding:9px 11px;border-bottom:1px solid #eef2f8;vertical-align:top;max-width:320px}
+.dl-radio{display:flex;gap:14px;margin:10px 0}
+.dl-radio label{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer}
+.dl-result{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.dl-result .big{font-size:26px;font-weight:800;color:#30ad82}
+.dl-steps{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.dl-step{display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #e4eaf3;border-radius:18px;padding:7px 14px;font-size:12px;color:#71809d}
+.dl-step.on{background:#eaf2ff;color:#3d82f6;border-color:#b8d2fb;font-weight:700}
+/* ---------- 数据库浏览器 ---------- */
+.db-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:#fff;border:1px solid #e4eaf3;border-radius:12px;padding:13px 15px;margin-bottom:16px;box-shadow:0 16px 40px rgba(33,63,112,.07)}
+.db-search{flex:1;min-width:200px;display:flex;align-items:center;gap:9px;background:#f4f7fb;border:1px solid #e4eaf3;border-radius:9px;padding:9px 13px}
+.db-search input{border:0;background:none;outline:none;font:14px inherit;width:100%;color:#17213b}
+.db-select{border:1px solid #e4eaf3;border-radius:9px;padding:9px 11px;font:13px inherit;color:#17213b;background:#fff;cursor:pointer}
+.db-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.db-tab{display:flex;align-items:center;gap:8px;border:1px solid #e4eaf3;background:#fff;border-radius:11px;padding:10px 16px;font:600 13px inherit;color:#71809d;cursor:pointer}
+.db-tab .cnt{font-weight:400;font-size:11px;background:#f4f7fb;border-radius:10px;padding:3px 8px;color:#93a0b5}
+.db-tab.active{border-color:#b8d2fb;background:#eaf2ff;color:#3d82f6}
+.db-tab.active .cnt{background:#fff;color:#3d82f6}
+.sql-box{background:#102a4d;color:#d9e6ff;border-radius:11px;padding:15px 18px;margin-bottom:14px;font:13px/1.7 Consolas,Menlo,monospace;white-space:pre-wrap;position:relative}
+.sql-box .sql-tag{position:absolute;top:-9px;left:14px;background:#f2a93b;color:#fff;font:700 10px "Microsoft YaHei",sans-serif;border-radius:8px;padding:2px 9px;letter-spacing:1px}
+.sql-queries{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.sql-chip{border:1px solid #cfe0fb;background:#fff;color:#3d82f6;border-radius:16px;padding:7px 14px;font:600 12px inherit;cursor:pointer}
+.sql-chip:hover{background:#eaf2ff}
+.sql-chip.active{background:#3d82f6;color:#fff}
+.tbl-card{background:#fff;border:1px solid #e4eaf3;border-radius:12px;box-shadow:0 16px 40px rgba(33,63,112,.07);overflow:hidden}
+.tbl-scroll{max-height:520px;overflow:auto}
+table.db{width:100%;border-collapse:collapse;font-size:13px}
+table.db th{position:sticky;top:0;background:#f7f9fd;color:#5b6b8a;text-align:left;font-size:11px;letter-spacing:.5px;padding:11px 13px;border-bottom:1px solid #e4eaf3;white-space:nowrap;z-index:2}
+table.db td{padding:10px 13px;border-bottom:1px solid #eef2f8;vertical-align:top;max-width:340px}
+table.db tr:hover td{background:#f8fbff}
+td.mono{font-family:Consolas,Menlo,monospace;font-size:12px}
+.pill{display:inline-block;border-radius:10px;padding:2px 9px;font-size:11px;font-weight:600}
+.pill.ok{background:#e2f6ee;color:#30ad82}
+.pill.bad{background:#fde9eb;color:#e86571}
+.pill.k{background:#eaf2ff;color:#3d82f6}
+.diff-bar{display:inline-block;width:52px;height:5px;border-radius:4px;background:#edf1f8;vertical-align:middle;margin-right:6px;overflow:hidden}
+.diff-bar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#f2a93b,#e86571)}
+.db-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;border-top:1px solid #e4eaf3;background:#fbfcfe;font-size:12px;color:#71809d}
+.schema-note{font-size:12px;color:#71809d;background:#fff;border:1px dashed #d5dfec;border-radius:10px;padding:11px 14px;margin-bottom:16px}
+mark{background:#fff2c4;border-radius:3px;padding:0 1px}
+.db-loading{padding:40px;text-align:center;color:#71809d}
+</style>
+
+<section class="page-title"><div><p class="eyebrow">DATA CENTER</p><h1>数据中心</h1><p class="muted">数据加载与数据库浏览合并页：上方导入 JSON / CSV，下方实时查询 learning.db 全部表。</p></div></section>
+
+<div class="dc-tabs">
+  <button class="dc-tab {{ 'on' if tab == 'loader' else '' }}" data-tab="loader"><span>⇪</span> 数据加载器</button>
+  <button class="dc-tab {{ 'on' if tab == 'browser' else '' }}" data-tab="browser"><span>▧</span> 数据库浏览器</button>
+</div>
+
+<!-- ================= 数据加载器 ================= -->
+<div id="panel-loader" {{ 'hidden' if tab != 'loader' else '' }}>
+<div class="dl-steps">
+  <span class="dl-step {{ 'on' if not result and not token else '' }}"><b>①</b> 选择文件</span>
+  <span class="dl-step {{ 'on' if token else '' }}"><b>②</b> 解析校验 · 预览</span>
+  <span class="dl-step {{ 'on' if result else '' }}"><b>③</b> 确认导入</span>
+</div>
+
+{% if result %}
+<div class="dl-card">
+  <h3>导入完成</h3>
+  <div class="dl-result">
+    <span class="big">✓ {{ result.inserted }}</span><span>条新增</span>
+    {% if result.updated %}<span class="big" style="color:#3d82f6">{{ result.updated }}</span><span>条覆盖更新</span>{% endif %}
+    {% if result.skipped %}<span class="big" style="color:#f2a93b">{{ result.skipped }}</span><span>条跳过（ID 重复）</span>{% endif %}
+    <span>共处理 {{ result.total }} 条</span>
+  </div>
+  <p class="muted" style="margin-top:12px">数据已写入 SQLite：切到「数据库浏览器」标签可立即看到最新数据（导入后已自动刷新）。</p>
+  <a class="button primary" href="{{ url_for('data_page') }}">继续上传 <span>→</span></a>
+</div>
+{% endif %}
+
+{% if token %}
+<div class="dl-card">
+  <h3>② 校验通过，共 {{ staged_total }} 条待导入数据</h3>
+  <p class="muted">已暂存（未写入数据库）。下方预览前 {{ preview|length }} 条：</p>
+  <div style="overflow:auto">
+  <table class="dl-preview">
+    <thead><tr>{% if target == 'questions' %}<th>id</th><th>知识点</th><th>标题</th><th>题干</th><th>答案</th><th>难度</th>{% else %}<th>学生</th><th>题目</th><th>对错</th><th>用时(s)</th><th>时间</th>{% endif %}</tr></thead>
+    <tbody>
+    {% for row in preview %}
+      <tr>
+      {% if target == 'questions' %}
+        <td>{{ row.id }}</td><td>{{ row.knowledge_id }}</td><td>{{ row.title }}</td><td>{{ row.prompt }}</td><td>{{ row.answer }}</td><td>{{ '%.2f'|format(row.difficulty) }}</td>
+      {% else %}
+        <td>{{ row.student_id }}</td><td>{{ row.question_id }}</td><td>{{ '✓ 对' if row.correct else '✗ 错' }}</td><td>{{ row.duration_sec }}</td><td>{{ row.answered_at[:19] }}</td>
+      {% endif %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if staged_total > 20 %}<p class="muted">… 其余 {{ staged_total - 20 }} 条已通过校验</p>{% endif %}
+  {% if error_count %}
+  <div class="dl-errors" style="margin-top:14px"><strong>⚠ {{ error_count }} 条数据未通过校验（仅导入通过部分）：</strong>
+    <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+  <form method="post" action="{{ url_for('dataloader_commit') }}" style="margin-top:18px">
+    <input type="hidden" name="token" value="{{ token }}">
+    {% if target == 'questions' %}
+    <div class="dl-radio">
+      <label><input type="radio" name="duplicate_mode" value="skip" checked> 跳过已存在的 ID</label>
+      <label><input type="radio" name="duplicate_mode" value="overwrite"> 覆盖已存在的 ID</label>
+    </div>
+    {% endif %}
+    <button class="button primary" type="submit">确认导入 {{ staged_total }} 条 →</button>
+  </form>
+</div>
+{% elif not result %}
+<div class="dl-card">
+  <h3>① 上传数据文件</h3>
+  <div class="dl-grid">
+    <form method="post" action="{{ url_for('dataloader_preview') }}" enctype="multipart/form-data">
+      <div class="dl-drop" id="drop">
+        <input type="file" name="file" id="file-input" accept=".json,.csv,.txt" style="display:none">
+        <div style="font-size:34px">⇪</div>
+        <strong id="drop-title">点击选择 JSON / CSV 文件</strong>
+        <small id="drop-hint">题目：每行一条，choices 可为 JSON 数组或用「|」分隔</small>
+      </div>
+      <label class="muted" style="font-size:12px;display:block;margin-top:12px">导入目标</label>
+      <select class="dl-select" name="target">
+        <option value="questions">题目 questions</option>
+        <option value="interactions">答题记录 interactions</option>
+      </select>
+      <button class="button primary" type="submit" style="width:100%;margin-top:6px">解析并校验文件</button>
+    </form>
+    <div>
+      <p class="muted" style="font-size:12px;line-height:1.8">
+        <b>题目字段</b><br>
+        id*、knowledge_id*、title*、prompt*、choices*、answer*、explanation*、difficulty<br><br>
+        <b>记录字段</b><br>
+        student_id、question_id*、correct*（对/错）、duration_sec、answered_at<br><br>
+        * = 必填，id 留空自动生成
+      </p>
+      <a href="{{ url_for('dataloader_template', target='questions') }}" style="font-size:12px">下载题目模板 CSV</a><br>
+      <a href="{{ url_for('dataloader_template', target='interactions') }}" style="font-size:12px">下载记录模板 CSV</a>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if error and not token and not result %}
+<div class="dl-card" style="border-color:#f3c1c6">
+  <h3 style="color:#a0424c">上传失败</h3>
+  <p style="color:#a0424c">{{ error }}</p>
+  {% if errors %}<div class="dl-errors"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+</div>
+{% endif %}
+
+{% if not token and not result and not error %}
+<div class="dl-card">
+  <h3>可用知识点</h3>
+  <p class="muted">
+    {% for point in points %}<span class="tag" style="margin-right:8px">{{ point.id }} · {{ point.name }}</span>{% endfor %}
+  </p>
+</div>
+{% endif %}
+</div>
+
+<!-- ================= 数据库浏览器 ================= -->
+<div id="panel-browser" {{ 'hidden' if tab != 'browser' else '' }}>
+  <div class="db-toolbar">
+    <div class="db-search"><span>🔍</span><input id="q" placeholder="全文检索：输入题号、标题、知识点、学生…（实时过滤当前表）"></div>
+    <select class="db-select" id="f-knowledge" hidden></select>
+    <select class="db-select" id="f-correct" hidden></select>
+    <select class="db-select" id="f-student" hidden></select>
+    <button class="button" id="refresh-btn" style="padding:9px 14px;font-size:12px">↻ 刷新数据</button>
+    <button class="button ghost" id="export-btn">导出当前结果 CSV</button>
+  </div>
+
+  <div class="db-tabs" id="tabs"></div>
+  <div class="schema-note" id="schema-note"></div>
+  <div class="sql-queries" id="sql-chips" hidden></div>
+  <div class="sql-box" id="sql-box" hidden><span class="sql-tag">SQL</span><div id="sql-text"></div></div>
+
+  <div class="tbl-card">
+    <div class="tbl-scroll"><table class="db"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+    <div class="db-foot"><span id="row-info"></span><span>实时读取后端 SQLite · 只读查询</span></div>
+  </div>
+</div>
+
+<script>
+/* ---------- 标签切换 ---------- */
+(function(){
+  var tabs = document.querySelectorAll('.dc-tab');
+  tabs.forEach(function(b){
+    b.addEventListener('click', function(){
+      tabs.forEach(function(x){x.classList.toggle('on', x===b)});
+      document.getElementById('panel-loader').hidden = b.dataset.tab !== 'loader';
+      document.getElementById('panel-browser').hidden = b.dataset.tab !== 'browser';
+      if (b.dataset.tab === 'browser' && !window.__dbLoaded) loadDB();
+    });
+  });
+})();
+
+/* ---------- 上传区 ---------- */
+(function(){
+  var drop = document.getElementById('drop');
+  var input = document.getElementById('file-input');
+  if (!drop) return;
+  drop.addEventListener('click', function(){ input.click(); });
+  input.addEventListener('change', function(){
+    if (input.files.length){
+      drop.classList.add('has-file');
+      document.getElementById('drop-title').textContent = '已选择：' + input.files[0].name;
+      document.getElementById('drop-hint').textContent = (input.files[0].size/1024).toFixed(1) + ' KB，点击下方按钮解析';
+    }
+  });
+})();
+
+/* ---------- 数据库浏览器 ---------- */
+var DB = null, current = "questions", filterK = "", filterC = "", filterS = "", preset = null;
+var KNAME = {integer:"整数运算", fractions:"分数运算", equations:"一元一次方程", functions:"一次函数", geometry:"三角形面积"};
+
+var QUERIES = {
+  questions: [
+    {name:"各知识点题量与平均难度", sql:"SELECT knowledge_id, COUNT(*) AS 题量, ROUND(AVG(difficulty),3) AS 平均难度\nFROM questions GROUP BY knowledge_id;",
+     run:function(){var g={};DB.tables.questions.rows.forEach(function(r){(g[r.knowledge_id]=g[r.knowledge_id]||[]).push(r)});
+       return {cols:["knowledge_id","知识点","题量","平均难度"],rows:Object.keys(g).map(function(k){return [k,KNAME[k]||k,g[k].length,(g[k].reduce(function(s,r){return s+r.difficulty},0)/g[k].length).toFixed(3)]})}}},
+    {name:"难度最高的 10 道题", sql:"SELECT id, title, knowledge_id, difficulty\nFROM questions ORDER BY difficulty DESC LIMIT 10;",
+     run:function(){return {cols:["id","title","knowledge_id","difficulty"],rows:DB.tables.questions.rows.slice().sort(function(a,b){return b.difficulty-a.difficulty}).slice(0,10).map(function(r){return [r.id,r.title,r.knowledge_id,r.difficulty]})}}},
+    {name:"各知识点难度区间", sql:"SELECT knowledge_id, MIN(difficulty) AS 最低, MAX(difficulty) AS 最高\nFROM questions GROUP BY knowledge_id;",
+     run:function(){var g={};DB.tables.questions.rows.forEach(function(r){var a=g[r.knowledge_id]=g[r.knowledge_id]||[r.difficulty,r.difficulty];a[0]=Math.min(a[0],r.difficulty);a[1]=Math.max(a[1],r.difficulty)});
+       return {cols:["knowledge_id","知识点","最低难度","最高难度"],rows:Object.keys(g).map(function(k){return [k,KNAME[k]||k,g[k][0],g[k][1]]})}}}
+  ],
+  interactions: [
+    {name:"各知识点正确率", sql:"SELECT knowledge_id, COUNT(*) AS 答题数, ROUND(AVG(correct),3) AS 正确率\nFROM interactions GROUP BY knowledge_id;",
+     run:function(){var g={};DB.tables.interactions.rows.forEach(function(r){(g[r.knowledge_id]=g[r.knowledge_id]||[]).push(r)});
+       return {cols:["knowledge_id","知识点","答题数","正确率"],rows:Object.keys(g).map(function(k){var a=g[k];return [k,KNAME[k]||k,a.length,(a.reduce(function(s,r){return s+r.correct},0)/a.length).toFixed(3)]})}}},
+    {name:"最近 10 条答题记录", sql:"SELECT id, student_id, question_id, correct, answered_at, duration_sec\nFROM interactions ORDER BY id DESC LIMIT 10;",
+     run:function(){return {cols:["id","student_id","question_id","correct","answered_at","duration_sec"],rows:DB.tables.interactions.rows.slice().sort(function(a,b){return b.id-a.id}).slice(0,10).map(function(r){return [r.id,r.student_id,r.question_id,r.correct,r.answered_at,r.duration_sec]})}}},
+    {name:"答错次数最多的题", sql:"SELECT question_id, COUNT(*) AS 错误次数\nFROM interactions WHERE correct = 0 GROUP BY question_id ORDER BY 错误次数 DESC;",
+     run:function(){var g={};DB.tables.interactions.rows.filter(function(r){return !r.correct}).forEach(function(r){g[r.question_id]=(g[r.question_id]||0)+1});
+       return {cols:["question_id","错误次数"],rows:Object.keys(g).map(function(k){return [k,g[k]]}).sort(function(a,b){return b[1]-a[1]})}}},
+    {name:"平均答题时长", sql:"SELECT student_id, COUNT(*) AS 次数, ROUND(AVG(duration_sec),1) AS 平均秒\nFROM interactions GROUP BY student_id;",
+     run:function(){var g={};DB.tables.interactions.rows.forEach(function(r){(g[r.student_id]=g[r.student_id]||[]).push(r.duration_sec)});
+       return {cols:["student_id","次数","平均秒"],rows:Object.keys(g).map(function(k){var a=g[k];return [k,a.length,(a.reduce(function(s,v){return s+v},0)/a.length).toFixed(1)]})}}}
+  ]
+};
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function hl(s){var q=document.getElementById("q").value.trim();s=esc(s);if(!q)return s;
+  try{return s.replace(new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","gi"),"<mark>$1</mark>")}catch(e){return s}}
+function fmtChoice(v){try{var a=JSON.parse(v);return a.map(esc).join(" ｜ ")}catch(e){return esc(v)}}
+function cell(col,val){
+  if(col==="choices") return '<td class="mono">'+fmtChoice(val)+'</td>';
+  if(col==="correct") return '<td>'+(val?'<span class="pill ok">✓ 正确</span>':'<span class="pill bad">✗ 错误</span>')+'</td>';
+  if(col==="knowledge_id") return '<td><span class="pill k">'+hl(val)+'</span></td>';
+  if(col==="difficulty") return '<td class="mono"><span class="diff-bar"><i style="width:'+Math.round(val*100)+'%"></i></span>'+Number(val).toFixed(2)+'</td>';
+  if(col==="answer"||col==="id"||col==="question_id"||col==="student_id"||col==="source_id"||col==="target_id"||col==="duration_sec"||col==="ordinal"||col==="daily_goal"||col==="relation") return '<td class="mono">'+hl(val)+'</td>';
+  return '<td>'+hl(val)+'</td>';
+}
+function renderTabs(){
+  var el=document.getElementById("tabs");el.innerHTML="";
+  Object.keys(DB.tables).forEach(function(t){
+    var b=document.createElement("button");b.className="db-tab"+(t===current?" active":"");
+    b.innerHTML='<span>▤</span>'+t+'<span class="cnt">'+DB.tables[t].rows.length+' 行</span>';
+    b.onclick=function(){current=t;preset=null;filterK=filterC=filterS="";initFilters();render()};
+    el.appendChild(b);
+  });
+}
+function initFilters(){
+  var fk=document.getElementById("f-knowledge"),fc=document.getElementById("f-correct"),fs=document.getElementById("f-student");
+  var cols=DB.tables[current].columns;
+  fk.hidden=cols.indexOf("knowledge_id")<0;fc.hidden=cols.indexOf("correct")<0;fs.hidden=cols.indexOf("student_id")<0;
+  fk.innerHTML='<option value="">全部知识点</option>'+Object.keys(KNAME).map(function(k){return '<option value="'+k+'">'+KNAME[k]+'</option>'}).join("");
+  fc.innerHTML='<option value="">全部结果</option><option value="1">仅正确</option><option value="0">仅错误</option>';
+  var sts={};DB.tables[current].rows.forEach(function(r){if(r.student_id)sts[r.student_id]=1});
+  fs.innerHTML='<option value="">全部学习者</option>'+Object.keys(sts).map(function(s){return '<option value="'+s+'">'+s+'</option>'}).join("");
+  fk.value=filterK;fc.value=filterC;fs.value=filterS;
+}
+function currentRows(){
+  var q=document.getElementById("q").value.trim().toLowerCase();
+  return DB.tables[current].rows.filter(function(r){
+    if(filterK&&r.knowledge_id!==filterK)return false;
+    if(filterC&&String(r.correct)!==filterC)return false;
+    if(filterS&&r.student_id!==filterS)return false;
+    if(q){var hit=false;for(var k in r){if(String(r[k]).toLowerCase().indexOf(q)>=0){hit=true;break}}if(!hit)return false}
+    return true;
+  });
+}
+function render(){
+  var cols=DB.tables[current].columns;
+  document.getElementById("schema-note").innerHTML="<b>"+current+"</b>("+cols.map(esc).join(", ")+") — "+DB.tables[current].rows.length+" 行";
+  var chips=document.getElementById("sql-chips"),box=document.getElementById("sql-box");
+  var qs=QUERIES[current];
+  chips.hidden=box.hidden=!qs;
+  if(qs){
+    chips.innerHTML=qs.map(function(q,i){return '<button class="sql-chip'+(preset===i?" active":"")+'" data-i="'+i+'">▸ '+q.name+'</button>'}).join("");
+    Array.prototype.forEach.call(chips.children,function(b){b.onclick=function(){preset=+b.dataset.i;render()}});
+    if(preset!=null){
+      var r=qs[preset].run();
+      document.getElementById("sql-text").innerHTML=esc(qs[preset].sql);
+      box.hidden=false;
+      document.getElementById("thead").innerHTML="<tr>"+r.cols.map(function(c){return "<th>"+esc(c)+"</th>"}).join("")+"</tr>";
+      document.getElementById("tbody").innerHTML=r.rows.map(function(row){return "<tr>"+row.map(function(v,i){return cell(r.cols[i],v)}).join("")+"</tr>"}).join("");
+      document.getElementById("row-info").innerHTML="查询「"+qs[preset].name+"」：返回 "+r.rows.length+" 行";
+      return;
+    }
+  }
+  var rows=currentRows();
+  document.getElementById("thead").innerHTML="<tr>"+cols.map(function(c){return "<th>"+esc(c)+"</th>"}).join("")+"</tr>";
+  document.getElementById("tbody").innerHTML=rows.map(function(r){return "<tr>"+cols.map(function(c){return cell(c,r[c])}).join("")+"</tr>"}).join("");
+  document.getElementById("row-info").innerHTML=rows.length+" / "+DB.tables[current].rows.length+" 行"+(rows.length<DB.tables[current].rows.length?"（已过滤）":"");
+}
+function loadDB(){
+  document.getElementById("row-info").innerHTML="正在加载数据库…";
+  fetch("{{ url_for('api_db') }}").then(function(r){return r.json()}).then(function(d){
+    DB=d; window.__dbLoaded=true;
+    renderTabs();initFilters();render();
+  }).catch(function(e){
+    document.getElementById("row-info").innerHTML="加载失败："+e;
+  });
+}
+document.getElementById("q").addEventListener("input",function(){if(!DB)return;preset=null;render()});
+document.getElementById("f-knowledge").addEventListener("change",function(e){filterK=e.target.value;preset=null;render()});
+document.getElementById("f-correct").addEventListener("change",function(e){filterC=e.target.value;preset=null;render()});
+document.getElementById("f-student").addEventListener("change",function(e){filterS=e.target.value;preset=null;render()});
+document.getElementById("refresh-btn").addEventListener("click",function(){preset=null;loadDB()});
+document.getElementById("export-btn").onclick=function(){
+  if(!DB)return;
+  var csv;
+  if(preset!=null&&QUERIES[current]){var r=QUERIES[current][preset].run();
+    csv=[r.cols.join(",")].concat(r.rows.map(function(x){return x.map(function(v){return '"'+String(v).replace(/"/g,'""')+'"'}).join(",")})).join("\n");
+  }else{var cols=DB.tables[current].columns;var rows=currentRows();
+    csv=[cols.join(",")].concat(rows.map(function(r){return cols.map(function(c){return '"'+String(r[c]==null?"":r[c]).replace(/"/g,'""')+'"'}).join(",")})).join("\n");
+  }
+  var a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv"}));
+  a.download=current+(preset!=null?"_query":"")+".csv";a.click();
+};
+/* 初始：若当前就在浏览器标签，或导入完成后，立即加载 */
+{% if tab == 'browser' or result %}
+loadDB();
+{% endif %}
+</script>
+{% endblock %}
