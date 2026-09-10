@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-title"><div><p class="eyebrow">QUESTION LIBRARY</p><h1>题库中心</h1><p class="muted">当前显示 <b id="visible-count">{{ questions|length }}</b> 道题，可筛选、收藏并进入专项练习。</p></div><a class="button primary" href="{{ url_for('practice', student=student_id) }}">开始智能练习 <span>→</span></a></section>
+<form class="filterbar" method="get"><input type="hidden" name="student" value="{{ student_id }}"><input class="search-input" id="catalog-search" name="q" value="{{ keyword }}" placeholder="输入关键词即时查找"><select name="knowledge"><option value="">全部知识点</option>{% for point in points %}<option value="{{ point.id }}" {{ 'selected' if selected_knowledge == point.id else '' }}>{{ point.name }}</option>{% endfor %}</select><select name="level"><option value="">全部难度</option><option value="basic" {{ 'selected' if selected_level == 'basic' else '' }}>基础</option><option value="advanced" {{ 'selected' if selected_level == 'advanced' else '' }}>进阶</option></select><label class="check-filter"><input type="checkbox" name="favorites" value="1" {{ 'checked' if favorites_only else '' }}> 仅收藏</label><select id="catalog-sort" class="catalog-sort" aria-label="题目排序"><option value="default">默认排序</option><option value="difficulty-desc">难度从高到低</option><option value="difficulty-asc">难度从低到高</option><option value="unanswered">优先未练习</option></select><button class="button primary" type="submit">应用筛选</button></form>
+<section class="library-grid" id="library-grid">{% for question in questions %}<article class="question-card" data-search="{{ (question.title ~ ' ' ~ question.prompt ~ ' ' ~ question.knowledge_name)|lower }}" data-difficulty="{{ question.difficulty }}" data-answered="{{ '1' if question.answered else '0' }}"><div class="card-top"><span class="tag">{{ question.knowledge_name }}</span><span class="difficulty-dot {{ 'hard' if question.difficulty >= 0.52 else 'easy' }}">{{ '进阶' if question.difficulty >= 0.52 else '基础' }}</span></div><h3>{{ question.title }}</h3><p>{{ question.prompt }}</p><div class="card-footer"><span class="status-label {{ 'done' if question.answered and question.last_correct else 'wrong' if question.answered else '' }}">{{ '已掌握' if question.answered and question.last_correct else '待订正' if question.answered else '未练习' }}</span><div class="card-actions"><form method="post" action="{{ url_for('favorite', question_id=question.id) }}"><input type="hidden" name="student_id" value="{{ student_id }}"><button class="favorite-btn" aria-label="收藏题目">{{ '★' if question.favorite else '☆' }}</button></form><a class="button" href="{{ url_for('study', question_id=question.id, student=student_id) }}">做题 →</a></div></div></article>{% else %}<div class="empty-state"><strong>没有匹配的题目</strong><p>换一个筛选条件，或取消“仅收藏”。</p></div>{% endfor %}</section>
+<script>
+  const search = document.getElementById('catalog-search');
+  const sort = document.getElementById('catalog-sort');
+  const grid = document.getElementById('library-grid');
+  const count = document.getElementById('visible-count');
+  const cards = [...grid.querySelectorAll('.question-card')];
+  function updateCatalog() {
+    const phrase = search.value.trim().toLowerCase();
+    cards.forEach((card) => { card.hidden = phrase && !card.dataset.search.includes(phrase); });
+    const mode = sort.value;
+    const sorted = [...cards].sort((a, b) => {
+      if (mode === 'difficulty-desc') return Number(b.dataset.difficulty) - Number(a.dataset.difficulty);
+      if (mode === 'difficulty-asc') return Number(a.dataset.difficulty) - Number(b.dataset.difficulty);
+      if (mode === 'unanswered') return Number(a.dataset.answered) - Number(b.dataset.answered);
+      return 0;
+    });
+    sorted.forEach((card) => grid.append(card));
+    count.textContent = cards.filter((card) => !card.hidden).length;
+  }
+  search.addEventListener('input', updateCatalog);
+  sort.addEventListener('change', updateCatalog);
+</script>
+{% endblock %}
+
