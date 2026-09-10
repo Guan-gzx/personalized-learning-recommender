@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="study-shell"><a class="back-link" href="{{ url_for('dashboard', student=student_id) }}">← 返回学习面板</a><section class="study">{% if session_total > 1 %}<div class="session-status"><span>连续练习</span><strong>第 {{ session_step }} / {{ session_total }} 题</strong><div class="session-track"><i style="width: {{ ((session_step - 1) / session_total * 100)|round|int }}%"></i></div></div>{% endif %}<div class="study-top"><a class="tag" href="{{ url_for('knowledge_detail', knowledge_id=question.knowledge_id, student=student_id) }}">{{ question.knowledge_id }}</a><div><span class="difficulty">难度 {{ (question.difficulty * 100)|round|int }}%</span><form class="inline-favorite" method="post" action="{{ url_for('favorite', question_id=question.id) }}"><input type="hidden" name="student_id" value="{{ student_id }}"><button class="favorite-btn" aria-label="收藏题目">{{ '★' if favorite else '☆' }}</button></form></div></div><h1>{{ question.title }}</h1><p class="prompt">{{ question.prompt }}</p><form method="post" id="answer-form"> <input type="hidden" name="student_id" value="{{ student_id }}"><input type="hidden" name="session_total" value="{{ session_total }}"><input type="hidden" name="session_step" value="{{ session_step }}"><input type="hidden" name="knowledge" value="{{ knowledge }}"><input type="hidden" id="duration_sec" name="duration_sec" value="0">{% for choice in question.choices %}<label class="choice"><input required type="radio" name="answer" value="{{ choice }}"><span class="choice-key">{{ 'ABCD'[loop.index0] }}</span><span>{{ choice }}</span></label>{% endfor %}<button class="button primary submit-btn" type="submit">提交答案 <span>→</span></button></form></section></section>
+<script>
+  const studyStartedAt = Date.now();
+  document.getElementById('answer-form').addEventListener('submit', () => {
+    document.getElementById('duration_sec').value = ((Date.now() - studyStartedAt) / 1000).toFixed(1);
+  });
+</script>
+{% endblock %}
