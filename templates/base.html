@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>知序 | 个性化学习推荐</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a href="{{ url_for('dashboard') }}" class="brand"><span class="brand-mark">知</span><span>知序</span></a>
+      <p class="side-label">学习空间</p>
+      <nav class="side-nav">
+        <a class="{{ 'active' if request.endpoint == 'dashboard' else '' }}" href="{{ url_for('dashboard') }}"><span>◈</span> 学习总览</a>
+        <a class="{{ 'active' if request.endpoint in ['practice', 'study', 'result'] else '' }}" href="{{ url_for('practice', student=student_id) }}"><span>✦</span> 开始练习</a>
+        <a class="{{ 'active' if request.endpoint == 'library' else '' }}" href="{{ url_for('library', student=student_id) }}"><span>▦</span> 题库中心</a>
+        <a class="{{ 'active' if request.endpoint == 'mistakes' else '' }}" href="{{ url_for('mistakes', student=student_id) }}"><span>⊗</span> 错题本</a>
+        <a class="{{ 'active' if request.endpoint == 'history' else '' }}" href="{{ url_for('history', student=student_id) }}"><span>◒</span> 学习记录</a>
+        {% if is_admin %}
+        <a class="{{ 'active' if request.endpoint in ['data_page', 'dataloader_preview', 'dataloader_commit'] else '' }}" href="{{ url_for('data_page') }}"><span>⇪</span> 数据中心</a>
+        {% endif %}
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="mini-profile">
+          <div class="avatar">{{ current_user.display_name[0] if current_user else '?' }}</div>
+          <div>
+            <strong>{{ current_user.display_name if current_user else '未登录' }}</strong>
+            <small>
+              {% if is_admin %}
+                <span class="role-badge role-admin-mini">管理员</span>
+              {% else %}
+                <span class="role-badge role-user-mini">学习者</span>
+              {% endif %}
+              · 持续学习中
+            </small>
+          </div>
+        </div>
+        <div class="system-note">
+          遗忘曲线已开启<br>
+          <span>实时同步 · 安全存储</span>
+        </div>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <div class="topbar-context"><span class="status-dot"></span>学习空间 <span class="slash">/</span> 今日计划</div>
+        <span class="spacer"></span>
+        <div class="top-actions">
+          <button class="icon-btn" aria-label="通知">♧</button>
+          {% if current_user %}
+            <span class="user-chip">
+                  <span class="role-badge {% if is_admin %}role-admin-mini{% else %}role-user-mini{% endif %}">{{ '管理员' if is_admin else '用户' }}</span>
+                  <span class="user-name-text">{{ current_user.display_name }}</span>
+                  <a class="logout-btn" href="{{ url_for('logout') }}" title="切换账号">⏏ 切换</a>
+                </span>
+          {% else %}
+            <a class="login-btn" href="{{ url_for('login') }}">登录</a>
+          {% endif %}
+        </div>
+      </header>
+      <main>{% block content %}{% endblock %}</main>
+    </div>
+  </div>
+</body>
+</html>
