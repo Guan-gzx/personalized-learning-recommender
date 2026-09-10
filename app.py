@@ -47,12 +47,12 @@ app = Flask(__name__)
 app.secret_key = "plr-demo-secret-key-change-in-production"  # noqa: S105
 
 # ---------- 账号与角色 ----------
-# 演示用：管理员需密码，普通用户也设了密码以避免登录页留空。
+# 演示用：管理员有密码；普通用户免密（一键登录）。生产环境请改数据库+哈希。
 USERS = {
     "admin":    {"password": "admin123",   "role": "admin", "display_name": "管理员 Admin",   "tagline": "查看全量后台 · 调度数据"},
-    "alice":    {"password": "alice123",   "role": "user",  "display_name": "Alice 林小敏",  "tagline": "七年级 · 偏弱项:方程"},
-    "bob":      {"password": "bob123",     "role": "user",  "display_name": "Bob 王大力",    "tagline": "八年级 · 偏弱项:几何"},
-    "charlie":  {"password": "charlie123", "role": "user",  "display_name": "Charlie 周晓",  "tagline": "九年级 · 偏弱项:函数"},
+    "alice":    {"password": "",           "role": "user",  "display_name": "Alice 林小敏",  "tagline": "七年级 · 偏弱项:方程"},
+    "bob":      {"password": "",           "role": "user",  "display_name": "Bob 王大力",    "tagline": "八年级 · 偏弱项:几何"},
+    "charlie":  {"password": "",           "role": "user",  "display_name": "Charlie 周晓",  "tagline": "九年级 · 偏弱项:函数"},
 }
 
 
@@ -165,6 +165,7 @@ def login_submit():
     if record is None:
         return redirect(url_for("login", error="账号不存在", next=next_url))
     expected = record["password"]
+    # 普通用户免密：password 为空即视为通过；管理员必须输入正确密码
     if expected and password != expected:
         return redirect(url_for("login", error="密码错误", next=next_url))
     session["user_id"] = username
