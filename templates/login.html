@@ -1,67 +1,67 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="zh-CN" data-page-node-id="6jAPOM1n7kdx6EA7RsKjaf">
+<head data-page-node-id="OQTW5fTgrJvrH9684NyVl6">
+  <meta charset="utf-8" data-page-node-id="6yFNDZgDOZMBDnd6G96lhP">
+  <meta name="viewport" content="width=device-width, initial-scale=1" data-page-node-id="KbkG1R9ajkfcRPNBzq8nBB">
   <title>登录 · 知序</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" data-page-node-id="i2L6W8jHEzlgorPsAh2Lmi">
 </head>
-<body class="login-body">
-  <div class="login-shell">
-    <header class="login-header">
-      <a href="{{ url_for('login') }}" class="brand"><span class="brand-mark">知</span><span>知序</span></a>
-      <p class="login-tag">个性化学习推荐 · 多用户登录</p>
+<body class="login-body" data-page-node-id="dKM101sYxYS1rGktOkscwr">
+  <div class="login-shell" data-page-node-id="yDZovueq7yB9ks5YzG6Rbd">
+    <header class="login-header" data-page-node-id="P1MEHYG3cumuKlQ5vAQI7i">
+      <a href="{{ url_for('login') }}" class="brand" data-page-node-id="jjjnn9qfV8g25muyOEiCYd"><span class="brand-mark" data-page-node-id="ORQ5oerVIUCVEufZkSSw5H">知</span><span data-page-node-id="yZhEIosKJVL3O4HDkvDndm">知序</span></a>
+      <p class="login-tag" data-page-node-id="hCb6mXZoGml45irhzzyxaV">个性化学习推荐 · 多用户登录</p>
     </header>
 
     {% if error %}
-      <div class="login-banner">⚠️ {{ error }}</div>
+      <div class="login-banner" data-page-node-id="uP3MeeLRjpO9LZwRmVUH76">⚠️ {{ error }}</div>
     {% endif %}
 
-    <div class="login-card">
-      <h1>选择账号登录</h1>
-      <p class="login-hint">管理员可以查看数据中心与全部后台数据；普通用户只能进行学习练习。</p>
+    <div class="login-card" data-page-node-id="xk2h9fj2Vgcz5pEDBnPhhZ">
+      <h1 data-page-node-id="ekWSJWOXX46ZwIvS7jePao">选择账号登录</h1>
+      <p class="login-hint" data-page-node-id="6m46qTSQ8pvKLKkLKIFh2z">管理员可以查看数据中心与全部后台数据；普通用户只能进行学习练习。</p>
 
-      <div class="user-grid">
+      <div class="user-grid" data-page-node-id="mM9qKS7m9TiEoBdzkfGEro">
         {% for uid, info in users.items() %}
-        <form action="{{ url_for('login_submit') }}" method="post" class="user-tile user-{{ info.role }}">
-              <input type="hidden" name="username" value="{{ uid }}">
-              <input type="hidden" name="next" value="{{ next_url }}">
-              <div class="user-avatar">{{ info.display_name[0] }}</div>
-              <div class="user-meta">
-                <div class="user-name">
+        <form action="{{ url_for('login_submit') }}" method="post" class="user-tile user-{{ info.role }}" data-page-node-id="AbSWnowtHqzY5IlLRMRGLv">
+              <input type="hidden" name="username" value="{{ uid }}" data-page-node-id="UVqiWegddpB8lGOhUfdo8C">
+              <input type="hidden" name="next" value="{{ next_url }}" data-page-node-id="c9Vo5Vv1nOpDtDSfjD4xfu">
+              <div class="user-avatar" data-page-node-id="JmPFvjQFxYVTGblREQDWVQ">{{ info.display_name[0] }}</div>
+              <div class="user-meta" data-page-node-id="ZMrHCM73ENB35rO5dlLGPA">
+                <div class="user-name" data-page-node-id="SVAAHTUBZajj8SCEeQCIBS">
                   {{ info.display_name }}
                   {% if info.role == 'admin' %}
-                    <span class="role-badge role-admin">管理员</span>
+                    <span class="role-badge role-admin" data-page-node-id="deJtjfqKpqPMo3uFCLVtBL">管理员</span>
                   {% else %}
-                    <span class="role-badge role-user">用户</span>
+                    <span class="role-badge role-user" data-page-node-id="NiITCOwwALoUUyNeax94gu">用户</span>
                   {% endif %}
                 </div>
-                <div class="user-id">账号：{{ uid }}</div>
-                <div class="user-tagline">{{ info.tagline }}</div>
+                <div class="user-id" data-page-node-id="iNiNMBEEEdBFqVCZH6T0C9">账号：{{ uid }}</div>
+                <div class="user-tagline" data-page-node-id="HA4UAde7iKytLHW8ttA04h">{{ info.tagline }}</div>
               </div>
-              <div class="user-actions">
+              <div class="user-actions" data-page-node-id="R104Fy6wLfhRVaJQPyipkI">
                 {% if info.role == 'admin' %}
-                  <input type="password" name="password" placeholder="管理员密码" autocomplete="current-password" required>
-                  <button class="button primary" type="submit">登录</button>
+                  <input type="password" name="password" placeholder="管理员密码" autocomplete="current-password" required data-page-node-id="9VUHv3jJDxgWHY2ccqYWo3">
+                  <button class="button primary" type="submit" data-page-node-id="1JJ6DWZKWPEBOEBweUCOwh">登录</button>
                 {% else %}
-                  <input type="hidden" name="password" value="user">
-                  <button class="button" type="submit">以该用户登录</button>
+                  <input type="hidden" name="password" value="" data-page-node-id="LC5DHloXXPATrC8ccYl1OZ">
+                  <button class="button" type="submit" data-page-node-id="NmoEikzjkeBhBxLEO3oyqa">以该用户登录</button>
                 {% endif %}
               </div>
             </form>
         {% endfor %}
       </div>
 
-      <details class="login-help">
-        <summary>忘记密码或需要新账号？</summary>
-        <div class="help-body">
-          演示账号密码：admin / admin123、alice / alice123、bob / bob123、charlie / charlie123。
+      <details class="login-help" data-page-node-id="krTdZIF943wZ1mrsWtOxlS">
+        <summary data-page-node-id="Kz6oJx64dGACao80Zq2qXF">忘记密码或需要新账号？</summary>
+        <div class="help-body" data-page-node-id="D4U6UwF6y3C21loSDliAD0">
+          演示账号密码：admin / admin123（管理员必输）；alice / bob / charlie 一键免密登录。
           生产环境请改用数据库 + 哈希存储。
         </div>
       </details>
     </div>
 
-    <footer class="login-footer">
+    <footer class="login-footer" data-page-node-id="LUu19oNGqrPPGROBIJ5GdT">
       知序学习空间 · v0.5 · {{ users | length }} 个示例账号
     </footer>
   </div>
